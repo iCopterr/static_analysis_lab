@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional, Dict, Tuple
 
+
 @dataclass
 class LineItem:
     sku: str
@@ -8,6 +9,7 @@ class LineItem:
     unit_price: float
     qty: int
     fragile: bool = False
+
 
 @dataclass
 class Invoice:
@@ -18,31 +20,34 @@ class Invoice:
     coupon: Optional[str]
     items: List[LineItem]
 
+
 class InvoiceService:
     SHIPPING_RULES = {
         "TH": [(500, 60)],
         "JP": [(4000, 600)],
         "US": [(100, 15), (300, 8)],
-        "DEFAULT": [(200, 25)]
+        "DEFAULT": [(200, 25)],
     }
 
     TAX_RATE = {
         "TH": 0.07,
         "JP": 0.10,
         "US": 0.08,
-        "DEFAULT": 0.05
+        "DEFAULT": 0.05,
     }
 
     def __init__(self) -> None:
         self._coupon_rate: Dict[str, float] = {
             "WELCOME10": 0.10,
             "VIP20": 0.20,
-            "STUDENT5": 0.05
+            "STUDENT5": 0.05,
         }
 
+    # -------- Validation --------
     def _validate(self, inv: Invoice) -> None:
         if not inv or not inv.invoice_id or not inv.customer_id:
             raise ValueError("Invalid invoice header")
+
         if not inv.items:
             raise ValueError("Invoice must contain items")
 
@@ -50,6 +55,7 @@ class InvoiceService:
             if not it.sku or it.qty <= 0 or it.unit_price < 0:
                 raise ValueError(f"Invalid item {it.sku}")
 
+    # -------- Helpers --------
     def _shipping_cost(self, country: str, subtotal: float) -> float:
         rules = self.SHIPPING_RULES.get(country, self.SHIPPING_RULES["DEFAULT"])
         for limit, cost in rules:
@@ -60,6 +66,16 @@ class InvoiceService:
     def _tax(self, country: str, amount: float) -> float:
         return amount * self.TAX_RATE.get(country, self.TAX_RATE["DEFAULT"])
 
+    def _membership_discount(self, membership: str, subtotal: float) -> float:
+        if membership == "gold":
+            return subtotal * 0.03
+        if membership == "platinum":
+            return subtotal * 0.05
+        if subtotal > 3000:
+            return 20
+        return 0.0
+
+    # -------- Main logic --------
     def compute_total(self, inv: Invoice) -> Tuple[float, List[str]]:
         warnings: List[str] = []
         self._validate(inv)
@@ -67,13 +83,7 @@ class InvoiceService:
         subtotal = sum(it.unit_price * it.qty for it in inv.items)
         fragile_fee = sum(5.0 * it.qty for it in inv.items if it.fragile)
 
-        discount = 0.0
-        if inv.membership == "gold":
-            discount = subtotal * 0.03
-        elif inv.membership == "platinum":
-            discount = subtotal * 0.05
-        elif subtotal > 3000:
-            discount = 20
+        discount = self._membership_discount(inv.membership, subtotal)
 
         if inv.coupon:
             rate = self._coupon_rate.get(inv.coupon.strip())
@@ -85,7 +95,7 @@ class InvoiceService:
         shipping = self._shipping_cost(inv.country, subtotal)
         tax = self._tax(inv.country, subtotal - discount)
 
-        total = max(0, subtotal + shipping + fragile_fee + tax - discount)
+        total = max(0.0, subtotal + shipping + fragile_fee + tax - discount)
 
         if subtotal > 10000 and inv.membership not in ("gold", "platinum"):
             warnings.append("Consider membership upgrade")
