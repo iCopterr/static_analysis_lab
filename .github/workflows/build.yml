@@ -1,4 +1,4 @@
-name: SonarCloud
+name: SonarCloud Analysis
 
 on:
   push:
@@ -7,12 +7,25 @@ on:
     branches: [ "main" ]
 
 jobs:
-  sonarcloud:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          fetch-depth: 0
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run tests with coverage
+        run: |
+          PYTHONPATH=src pytest --cov=. --cov-report=xml:coverage.xml tests/
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
