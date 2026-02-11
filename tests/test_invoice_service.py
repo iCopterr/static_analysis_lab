@@ -27,3 +27,17 @@ def test_invalid_qty_raises():
     )
     with pytest.raises(ValueError):
         service.compute_total(inv)
+
+def test_gold_membership_discount():
+    service = InvoiceService()
+    inv = Invoice(
+        invoice_id="I-003",
+        customer_id="C-001",
+        country="US",
+        membership="gold",
+        coupon=None,
+        items=[LineItem("A", "book", 1000, 1)]
+    )
+    total, _ = service.compute_total(inv)
+    assert total > 0
+
