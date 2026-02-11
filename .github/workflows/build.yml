@@ -31,6 +31,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: >
-            -Dsonar.projectKey=static_analysis_lab
+            -Dsonar.projectKey=iCopterr_static_analysis_lab
             -Dsonar.organization=icopterr
             -Dsonar.python.coverage.reportPaths=coverage.xml
